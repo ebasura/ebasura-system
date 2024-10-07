@@ -1,0 +1,11 @@
+### Python ###
+# Byte-compiled / optimized / DLL files
+app/__pycache__/
+app/ebasura/__pycache__/
+app/routes/__pycache__/
+app/engine/__pycache__/
+*.py[cod]
+*$py.class
+
+.venv
+.env
