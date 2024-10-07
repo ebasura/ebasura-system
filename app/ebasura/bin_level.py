@@ -1,6 +1,7 @@
 import RPi.GPIO as GPIO
 import time
 from ..engine import db 
+import config
 GPIO.setmode(GPIO.BCM)
 
 # Define pin numbers for the two sensors
@@ -48,7 +49,7 @@ def recyclable_bin():
         while True:
             # Measure distance for both bins
             time.sleep(5)
-            update_bin_level(1, measure_distance(TRIG_BIN_ONE, ECHO_BIN_ONE))    
+            update_bin_level(config.BIN_ID, measure_distance(TRIG_BIN_ONE, ECHO_BIN_ONE), 1)    
     except KeyboardInterrupt: # If CTRL+C is pressed, exit cleanly:
         print("Keyboard interrupt")
         
@@ -58,26 +59,47 @@ def non_recyclable_bin():
         while True:
             # Measure distance for both bins
             time.sleep(5)
-            update_bin_level(2, measure_distance(TRIG_BIN_TWO, ECHO_BIN_TWO))    
+            update_bin_level(config.BIN_ID, measure_distance(TRIG_BIN_TWO, ECHO_BIN_TWO), 2)    
     except KeyboardInterrupt: # If CTRL+C is pressed, exit cleanly:
         print("Keyboard interrupt")
 
+def ensure_waste_type_exists(waste_type_id):
 
-def update_bin_level(bin_id, distance):
-    # Set the distance, capping it at 100
-    distance = distance if distance <= 100 else 100
-    
-    # SQL query to update the bin level
-    query = """
-    UPDATE waste_bins 
+    query_check = "SELECT COUNT(*) FROM waste_type WHERE waste_type_id = %s"
+    args = (waste_type_id,)
+
+    result = db.fetch_one(query_check, args)
+    if result[0] == 0:
+
+        query_insert = "INSERT INTO waste_type (waste_type_id) VALUES (%s)"
+        db.update(query_insert, args)
+
+def update_bin_level(bin_id, distance, waste_id):
+
+    distance = min(distance, 100)
+
+    ensure_waste_type_exists(waste_id)
+
+    query_update = """
+    UPDATE waste_level 
     SET current_fill_level = %s, last_update = NOW()
-    WHERE bin_id = %s
+    WHERE bin_id = %s AND waste_type_id = %s
     """
-    args = (distance, bin_id)
+    args_update = (distance, bin_id, waste_id)
 
-    # Use the Database class to execute the query
-    if db.update(query, args):
-        print(f"Updated bin {bin_id} with level {distance} cm.")
+
+    if not db.update(query_update, args_update):
+
+        query_insert = """
+        INSERT INTO waste_level (bin_id, waste_type_id, current_fill_level, last_update)
+        VALUES (%s, %s, %s, NOW())
+        """
+        args_insert = (bin_id, waste_id, distance)
+
+        if db.update(query_insert, args_insert):
+            print(f"Inserted new bin {waste_id} with level {distance} cm.")
+        else:
+            print(f"Failed to update or insert bin {waste_id}.")
     else:
-        print(f"Failed to update bin {bin_id}.")
+        print(f"Updated bin {waste_id} with level {distance} cm.")
 
