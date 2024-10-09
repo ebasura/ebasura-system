@@ -2,18 +2,12 @@ import uuid
 import os
 from flask import Flask, jsonify, request
 from flask_cors import CORS
-from dash import Dash, dcc, html, Input, Output
-import plotly.express as px
-import pandas as pd
 from ..routes.system_info import system_info_bp
 from ..routes.system_health import system_health_bp
-from ..routes.detection import detection_bp
-from ..routes.gauge import gauge_bp
 from ..engine import db
-from .charts import create_dash
+
 def create_app():
     app = Flask(__name__)
-    create_dash(app)
     UPLOAD_FOLDER = 'models'    
     app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 
@@ -22,8 +16,6 @@ def create_app():
     # Register blueprints
     app.register_blueprint(system_info_bp)
     app.register_blueprint(system_health_bp)
-    app.register_blueprint(detection_bp)
-    app.register_blueprint(gauge_bp)
 
     def generate_random_filename(filename):
         """Generate a random filename with the same file extension."""
