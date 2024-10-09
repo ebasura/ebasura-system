@@ -10,7 +10,7 @@ import time
 import os
 import threading
 import queue
-
+import config
 # Load the TFLite model
 interpreter = tf.lite.Interpreter(model_path="models/vww_96_grayscale_quantized.tflite")
 interpreter.allocate_tensors()
@@ -19,8 +19,69 @@ interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
+TRIG_BIN_TWO = config.TRIG_DISTANCE_CHECKER  # Trigger pin for the ultrasonic sensor monitoring the non-recyclable bin
+ECHO_BIN_TWO = config.ECHO_DISTANCE_CHECKER  # Echo pin for the ultrasonic sensor monitoring the non-recyclable bin
+
 # Define pin numbers for the servo motors
 SERVO_PIN = 18  # Update with the correct GPIO pin for your servo motor
+
+GPIO.setmode(GPIO.BCM)
+
+GPIO.setup(TRIG_BIN_TWO, GPIO.OUT)
+GPIO.setup(ECHO_BIN_TWO, GPIO.IN)
+
+
+def measure_distance(trigger, echo, timeout=1.0):
+    """
+    Measure the distance using an ultrasonic sensor.
+    Parameters:
+    - trigger: GPIO pin number for the trigger pin of the sensor.
+    - echo: GPIO pin number for the echo pin of the sensor.
+    - timeout: Maximum time to wait for a response from the sensor (in seconds).
+    
+    Returns the calculated distance in centimeters, or -1 if no valid reading.
+    """
+    # Ensure the trigger is low before starting measurement
+    GPIO.output(trigger, False)
+    time.sleep(0.05)  # Short pause to ensure proper triggering
+    
+    # Send a 10 microsecond pulse to the trigger pin
+    GPIO.output(trigger, True)
+    time.sleep(0.00001)  # 10 microseconds
+    GPIO.output(trigger, False)
+    
+    pulse_start = time.time()
+    start_time = pulse_start
+    
+    # Wait for the echo pin to go high (pulse start) with timeout
+    while GPIO.input(echo) == 0:
+        pulse_start = time.time()
+        if pulse_start - start_time > timeout:
+            print("Timeout: No echo response")
+            return -1
+    
+    pulse_end = time.time()
+    # Wait for the echo pin to go low (pulse end) with timeout
+    while GPIO.input(echo) == 1:
+        pulse_end = time.time()
+        if pulse_end - pulse_start > timeout:
+            print("Timeout: Echo response too long")
+            return -1
+
+    # Calculate the duration of the pulse
+    pulse_duration = pulse_end - pulse_start
+    
+    # Calculate the distance in cm (speed of sound = 34300 cm/s)
+    distance = pulse_duration * 17150
+    distance = round(distance, 2)
+
+    return distance
+
+
+def get_optimal_reading(repetitions=5):
+    readings = [measure_distance(TRIG_BIN_TWO, ECHO_BIN_TWO) for _ in range(repetitions)]
+    return sum(readings) / len(readings)
+
 
 # Initialize ServoController
 class ServoController:
@@ -138,6 +199,7 @@ async def websocket_handler(websocket, path):
                 "frame": "data:image/jpeg;base64," + frame_data,
                 "predictions": predictions
             }
+            
 
             # Send the dictionary over the WebSocket connection in JSON format
             await websocket.send(json.dumps(message))
@@ -169,48 +231,58 @@ try:
             print("Failed to grab frame")
             break
 
-        # Prompt user to capture or quit
-        key = input("Press '1' to capture and predict, or 'q' to quit: ")
-        if key == '1':
-            # Capture the current frame and make prediction
-            predictions = recognize_frame(frame)
+        # Get the distance reading
+        reading = get_optimal_reading()
+        
 
-            # Save the captured frame to a directory
-            if predictions is not None:
-                label, confidence = predictions[0]
-                directory = os.path.join('captured_frames', label)
-                if not os.path.exists(directory):
-                    os.makedirs(directory)
-                frame_path = os.path.join(directory, f'captured_{int(time.time())}.jpg')
-                cv2.imwrite(frame_path, frame)
-                print(f"Frame saved to {frame_path}")
+        time.sleep(1)
+        servo_command_queue.put(90)
+        print("Servo moved back to default position.")
+        print(reading)
+        # Skip processing if no object is close enough
+        if reading > 20:
+            continue
 
-            if predictions is not None:
-                for label, confidence in predictions:
-                    print(f"{label}: {confidence * 100:.2f}%")
+        # Capture the current frame and make prediction if object is close
+        predictions = recognize_frame(frame)
 
-                # Upload the image and sort based on prediction
-                label, confidence = predictions[0]
-                if label == 'recyclable':
-                    servo_command_queue.put(0)  # Move left for recyclable items
-                    print("Item sorted to recyclable bin.")
-                elif label == 'non-recyclable':
-                    servo_command_queue.put(180)  # Move right for non-recyclable items
-                    print("Item sorted to non-recyclable bin.")
-                else:
-                    servo_command_queue.put(90)  # Default angle for unrecognized items
-                    print("Item not recognized. No sorting action taken.")
+        if predictions is None:
+            print("No predictions made, skipping this frame.")
+            continue  # Skip further actions if no valid predictions
 
-                time.sleep(2)
-                servo_command_queue.put(90)
-                print("Servo moved back to default position.")
+        label, confidence = predictions[0]
 
-        # Break the loop if 'q' is pressed
-        elif key == 'q':
-            break
+        # Save the captured frame to a directory based on the prediction label
+        directory = os.path.join('captured_frames', label)
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+        frame_path = os.path.join(directory, f'captured_{int(time.time())}.jpg')
+        cv2.imwrite(frame_path, frame)
+        print(f"Frame saved to {frame_path}")
+
+        # Log the predictions
+        for pred_label, pred_confidence in predictions:
+            print(f"{pred_label}: {pred_confidence * 100:.2f}%")
+
+        # Act based on the label (servo movement)
+        if label == 'recyclable':
+            servo_command_queue.put(0)  # Move left for recyclable items
+            print("Item sorted to recyclable bin.")
+        elif label == 'non-recyclable':
+            servo_command_queue.put(180)  # Move right for non-recyclable items
+            print("Item sorted to non-recyclable bin.")
+        else:
+            servo_command_queue.put(90)  # Default angle for unrecognized items
+            print("Item not recognized. No sorting action taken.")
+
+        # Reset the servo to default position after 2 seconds
+        time.sleep(1)
+        servo_command_queue.put(90)
+        print("Servo moved back to default position.")
+
 finally:
-    # When everything is done, release the capture
-    cap.release()
+    # Proper resource cleanup
+    cap.release()  # Release the webcam
     servo_command_queue.put(None)  # Stop the servo thread
-    servo_thread.join()
-    servo_controller.cleanup()
+    servo_thread.join()  # Wait for the servo thread to finish
+    servo_controller.cleanup()  # Cleanup GPIO pins
