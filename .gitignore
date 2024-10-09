@@ -1,6 +1,7 @@
 ### Python ###
 # Byte-compiled / optimized / DLL files
 app/__pycache__/
+captured_frames/
 app/ebasura/__pycache__/
 app/routes/__pycache__/
 app/engine/__pycache__/
