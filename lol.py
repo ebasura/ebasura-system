@@ -218,71 +218,76 @@ async def start_server():
 def start_server_thread():
     asyncio.run(start_server())
 
+
+def servo_rotation():
+    try:
+        while True:
+            # Capture frame-by-frame from webcam
+            with camera_lock:
+                ret, frame = cap.read()
+            if not ret:
+                print("Failed to grab frame")
+                break
+
+            # Get the distance reading
+            reading = get_optimal_reading()
+            
+
+            time.sleep(1)
+            servo_command_queue.put(90)
+            print("Servo moved back to default position.")
+            print(reading)
+            # Skip processing if no object is close enough
+            if reading > 20:
+                continue
+
+            # Capture the current frame and make prediction if object is close
+            predictions = recognize_frame(frame)
+
+            if predictions is None:
+                print("No predictions made, skipping this frame.")
+                continue  # Skip further actions if no valid predictions
+
+            label, confidence = predictions[0]
+
+            # Save the captured frame to a directory based on the prediction label
+            directory = os.path.join('captured_frames', label)
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            frame_path = os.path.join(directory, f'captured_{int(time.time())}.jpg')
+            cv2.imwrite(frame_path, frame)
+            print(f"Frame saved to {frame_path}")
+
+            # Log the predictions
+            for pred_label, pred_confidence in predictions:
+                print(f"{pred_label}: {pred_confidence * 100:.2f}%")
+
+            # Act based on the label (servo movement)
+            if label == 'recyclable':
+                servo_command_queue.put(0)  # Move left for recyclable items
+                print("Item sorted to recyclable bin.")
+            elif label == 'non-recyclable':
+                servo_command_queue.put(180)  # Move right for non-recyclable items
+                print("Item sorted to non-recyclable bin.")
+            else:
+                servo_command_queue.put(90)  # Default angle for unrecognized items
+                print("Item not recognized. No sorting action taken.")
+
+            # Reset the servo to default position after 2 seconds
+            time.sleep(1)
+            servo_command_queue.put(90)
+            print("Servo moved back to default position.")
+
+    finally:
+        # Proper resource cleanup
+        cap.release()  # Release the webcam
+        servo_command_queue.put(None)  # Stop the servo thread
+        servo_thread.join()  # Wait for the servo thread to finish
+        servo_controller.cleanup()  # Cleanup GPIO pins
+
+
+
 # Start the WebSocket server in a separate thread
 server_thread = threading.Thread(target=start_server_thread)
 server_thread.start()
-
-try:
-    while True:
-        # Capture frame-by-frame from webcam
-        with camera_lock:
-            ret, frame = cap.read()
-        if not ret:
-            print("Failed to grab frame")
-            break
-
-        # Get the distance reading
-        reading = get_optimal_reading()
-        
-
-        time.sleep(1)
-        servo_command_queue.put(90)
-        print("Servo moved back to default position.")
-        print(reading)
-        # Skip processing if no object is close enough
-        if reading > 20:
-            continue
-
-        # Capture the current frame and make prediction if object is close
-        predictions = recognize_frame(frame)
-
-        if predictions is None:
-            print("No predictions made, skipping this frame.")
-            continue  # Skip further actions if no valid predictions
-
-        label, confidence = predictions[0]
-
-        # Save the captured frame to a directory based on the prediction label
-        directory = os.path.join('captured_frames', label)
-        if not os.path.exists(directory):
-            os.makedirs(directory)
-        frame_path = os.path.join(directory, f'captured_{int(time.time())}.jpg')
-        cv2.imwrite(frame_path, frame)
-        print(f"Frame saved to {frame_path}")
-
-        # Log the predictions
-        for pred_label, pred_confidence in predictions:
-            print(f"{pred_label}: {pred_confidence * 100:.2f}%")
-
-        # Act based on the label (servo movement)
-        if label == 'recyclable':
-            servo_command_queue.put(0)  # Move left for recyclable items
-            print("Item sorted to recyclable bin.")
-        elif label == 'non-recyclable':
-            servo_command_queue.put(180)  # Move right for non-recyclable items
-            print("Item sorted to non-recyclable bin.")
-        else:
-            servo_command_queue.put(90)  # Default angle for unrecognized items
-            print("Item not recognized. No sorting action taken.")
-
-        # Reset the servo to default position after 2 seconds
-        time.sleep(1)
-        servo_command_queue.put(90)
-        print("Servo moved back to default position.")
-
-finally:
-    # Proper resource cleanup
-    cap.release()  # Release the webcam
-    servo_command_queue.put(None)  # Stop the servo thread
-    servo_thread.join()  # Wait for the servo thread to finish
-    servo_controller.cleanup()  # Cleanup GPIO pins
+servo_rotation()

@@ -30,3 +30,20 @@ class PhilSMSClient:
         else:
             print(f"HTTP Error: {response.status_code}")
             print(response.text)
+
+
+# Replace 'your_api_token' with your actual PhilSMS API token
+api_token = '944|9Szci3KSbDkuxNGOzsL9nRycelhylzLoidyCNf4u'
+
+# Replace 'your_sender_id' with your registered sender ID from PhilSMS
+sender_id = 'PhilSMS'
+
+# Create an instance of the PhilSMSClient
+sms_client = PhilSMSClient(token=api_token, sender_id=sender_id)
+
+# Define the recipient's phone number and the message content
+recipient_number = '+639157581588'  # Replace with the recipient's mobile number
+message_content = 'Testing.'
+
+# Send the SMS message
+sms_client.send_sms(recipient=recipient_number, message=message_content)

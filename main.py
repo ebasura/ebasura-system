@@ -4,6 +4,7 @@ from app.ebasura.bin_level import recyclable_bin, non_recyclable_bin
 import time
 import sys
 import RPi.GPIO as GPIO
+import lol
 
 def run_flask_app():
     """Start the Flask application."""
@@ -33,6 +34,10 @@ if __name__ == "__main__":
         flask_thread = Thread(target=run_flask_app)
         flask_thread.start()
         
+        server_thread = flask_thread.Thread(target=lol.start_server_thread)
+        server_thread.start()
+        lol.servo_rotation()
+            
         # Start the GPIO bin level measurement
         run_gpio_bin_level()
 
