@@ -184,12 +184,19 @@ async def websocket_handler(websocket, path):
             _, buffer = cv2.imencode('.jpg', frame)
             frame_data = base64.b64encode(buffer).decode('utf-8')
 
-            # Create a dictionary to send both frame and predictions
+            # dictionary
             message = {
                 "frame": "data:image/jpeg;base64," + frame_data,
-                "predictions": predictions
+                "predictions": predictions,
+                "health_status": {
+                    "servo_online": True,
+                    "sensors": {
+                        "recyclable_bin": False,
+                        "non_recyclable_bin": True,
+                        "proximity": True,
+                    },
+                }
             }
-            
 
             # Send the dictionary over the WebSocket connection in JSON format
             await websocket.send(json.dumps(message))
@@ -291,8 +298,3 @@ def servo_rotation():
         servo_controller.cleanup()  # Cleanup GPIO pins
         print("Servo rotation stopped and resources cleaned up.")
 
-
-# Start the WebSocket server in a separate thread
-server_thread = threading.Thread(target=start_server_thread)
-server_thread.start()
-servo_rotation()

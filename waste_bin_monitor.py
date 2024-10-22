@@ -1,6 +1,6 @@
 import RPi.GPIO as GPIO
 import time
-from ..engine import db 
+from app.engine import db 
 import config
 
 # Set GPIO pin numbering mode
@@ -20,40 +20,71 @@ GPIO.setup(ECHO_BIN_ONE, GPIO.IN)
 GPIO.setup(TRIG_BIN_TWO, GPIO.OUT)
 GPIO.setup(ECHO_BIN_TWO, GPIO.IN)
 
-def measure_distance(trigger, echo):
+import statistics
+import time
+import RPi.GPIO as GPIO
+
+def measure_distance_once(trigger, echo):
     """
-    Measure the distance using an ultrasonic sensor.
+    Measure the distance using an ultrasonic sensor for a single reading.
     Parameters:
     - trigger: GPIO pin number for the trigger pin of the sensor
     - echo: GPIO pin number for the echo pin of the sensor
-    
+
     Returns the calculated distance in centimeters.
     """
     # Ensure the trigger is low before starting measurement
     GPIO.output(trigger, False)
-    time.sleep(2)
-    
+    time.sleep(0.05)  # Short delay before measurement
+
     # Send a 10 microsecond pulse to the trigger pin
     GPIO.output(trigger, True)
     time.sleep(0.00001)
     GPIO.output(trigger, False)
-    
+
     # Wait for the echo pin to go high (pulse start)
+    pulse_start = time.time()
     while GPIO.input(echo) == 0:
         pulse_start = time.time()
 
     # Wait for the echo pin to go low (pulse end)
+    pulse_end = time.time()
     while GPIO.input(echo) == 1:
         pulse_end = time.time()
 
     # Calculate the duration of the pulse
     pulse_duration = pulse_end - pulse_start
-    
+
     # Calculate distance in cm (speed of sound = 34300 cm/s)
     distance = pulse_duration * 17150
-    distance = round(distance, 2)
+    return round(distance, 2)
 
-    return distance
+def measure_distance(trigger, echo, num_samples=5):
+    """
+    Measure the distance multiple times and return the median for accuracy.
+    Parameters:
+    - trigger: GPIO pin number for the trigger pin of the sensor
+    - echo: GPIO pin number for the echo pin of the sensor
+    - num_samples: Number of readings to take for the median calculation
+
+    Returns the median distance in centimeters.
+    """
+    distances = []
+    
+    for _ in range(num_samples):
+        distance = measure_distance_once(trigger, echo)
+        if distance > 0:  # Ignore invalid readings (e.g., negative or zero values)
+            distances.append(distance)
+        time.sleep(0.1)  # Small delay between readings to prevent sensor overload
+    
+    if distances:
+        # Calculate the median distance from the valid readings
+        median_distance = statistics.median(distances)
+        return median_distance
+    else:
+        # If no valid readings, return -1 to indicate failure
+        return -1
+
 
 def recyclable_bin():
     """
