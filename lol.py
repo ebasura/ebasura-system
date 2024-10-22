@@ -19,16 +19,10 @@ interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
-TRIG_BIN_TWO = config.TRIG_DISTANCE_CHECKER  # Trigger pin for the ultrasonic sensor monitoring the non-recyclable bin
-ECHO_BIN_TWO = config.ECHO_DISTANCE_CHECKER  # Echo pin for the ultrasonic sensor monitoring the non-recyclable bin
 
-# Define pin numbers for the servo motors
-SERVO_PIN = 18  # Update with the correct GPIO pin for your servo motor
 
 GPIO.setmode(GPIO.BCM)
-
-GPIO.setup(TRIG_BIN_TWO, GPIO.OUT)
-GPIO.setup(ECHO_BIN_TWO, GPIO.IN)
+GPIO.setup(config.OBJECT_DETECTOR_PIN, GPIO.IN)
 
 
 def measure_distance(trigger, echo, timeout=1.0):
@@ -78,10 +72,6 @@ def measure_distance(trigger, echo, timeout=1.0):
     return distance
 
 
-def get_optimal_reading(repetitions=5):
-    readings = [measure_distance(TRIG_BIN_TWO, ECHO_BIN_TWO) for _ in range(repetitions)]
-    return sum(readings) / len(readings)
-
 
 # Initialize ServoController
 class ServoController:
@@ -104,7 +94,7 @@ class ServoController:
         self.pwm.stop()
         GPIO.cleanup()
 
-servo_controller = ServoController(SERVO_PIN)
+servo_controller = ServoController(config.SERVO_PIN)
 servo_command_queue = queue.Queue()
 
 # Thread to handle servo commands
@@ -219,72 +209,87 @@ def start_server_thread():
     asyncio.run(start_server())
 
 
+# Helper to handle servo movements
+def move_servo(angle):
+    servo_command_queue.put(angle)
+    print(f"Servo moved to {angle} degrees.")
+
+def save_frame(frame, label):
+    directory = os.path.join('captured_frames', label)
+    if not os.path.exists(directory):
+        os.makedirs(directory)
+    frame_path = os.path.join(directory, f'captured_{int(time.time())}.jpg')
+    cv2.imwrite(frame_path, frame)
+    print(f"Frame saved to {frame_path}")
+
+def process_predictions(predictions):
+    if predictions is None:
+        print("No predictions made, skipping this frame.")
+        return False
+
+    label, confidence = predictions[0]
+    
+    # Log predictions
+    for pred_label, pred_confidence in predictions:
+        print(f"{pred_label}: {pred_confidence * 100:.2f}%")
+
+    # Servo action based on the label
+    if label == 'recyclable':
+        move_servo(0)  # Move left for recyclable items
+        print("Item sorted to recyclable bin.")
+    elif label == 'non-recyclable':
+        move_servo(180)  # Move right for non-recyclable items
+        print("Item sorted to non-recyclable bin.")
+    else:
+        move_servo(90)  # Default angle for unrecognized items
+        print("Item not recognized. No sorting action taken.")
+    
+    return label
+
 def servo_rotation():
     try:
         while True:
-            # Capture frame-by-frame from webcam
+            # Grab frame from webcam
             with camera_lock:
                 ret, frame = cap.read()
             if not ret:
-                print("Failed to grab frame")
+                print("Failed to grab frame.")
                 break
 
-            # Get the distance reading
-            reading = get_optimal_reading()
-            
+            # Check sensor status
+            sensor_value = GPIO.input(config.OBJECT_DETECTOR_PIN)
 
-            time.sleep(1)
-            servo_command_queue.put(90)
-            print("Servo moved back to default position.")
-            print(reading)
-            # Skip processing if no object is close enough
-            if reading > 20:
+            # Reset servo to default if no object is detected
+            if sensor_value == GPIO.LOW:
+                move_servo(90)
+                time.sleep(0.5)  # Small pause before next check
                 continue
 
-            # Capture the current frame and make prediction if object is close
+            # Object detected, capture and process frame
             predictions = recognize_frame(frame)
+            
+            # Process predictions and handle actions accordingly
+            label = process_predictions(predictions)
+            if not label:
+                continue
 
-            if predictions is None:
-                print("No predictions made, skipping this frame.")
-                continue  # Skip further actions if no valid predictions
+            # Save the frame under the predicted label
+            save_frame(frame, label)
 
-            label, confidence = predictions[0]
+            # Reset the servo to default after 2 seconds
+            time.sleep(2)
+            move_servo(90)
 
-            # Save the captured frame to a directory based on the prediction label
-            directory = os.path.join('captured_frames', label)
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-            frame_path = os.path.join(directory, f'captured_{int(time.time())}.jpg')
-            cv2.imwrite(frame_path, frame)
-            print(f"Frame saved to {frame_path}")
-
-            # Log the predictions
-            for pred_label, pred_confidence in predictions:
-                print(f"{pred_label}: {pred_confidence * 100:.2f}%")
-
-            # Act based on the label (servo movement)
-            if label == 'recyclable':
-                servo_command_queue.put(0)  # Move left for recyclable items
-                print("Item sorted to recyclable bin.")
-            elif label == 'non-recyclable':
-                servo_command_queue.put(180)  # Move right for non-recyclable items
-                print("Item sorted to non-recyclable bin.")
-            else:
-                servo_command_queue.put(90)  # Default angle for unrecognized items
-                print("Item not recognized. No sorting action taken.")
-
-            # Reset the servo to default position after 2 seconds
-            time.sleep(1)
-            servo_command_queue.put(90)
-            print("Servo moved back to default position.")
-
+    except Exception as e:
+        print(f"An error occurred: {e}")
+    
     finally:
-        # Proper resource cleanup
+        # Cleanup resources
         cap.release()  # Release the webcam
         servo_command_queue.put(None)  # Stop the servo thread
-        servo_thread.join()  # Wait for the servo thread to finish
+        servo_thread.join()  # Ensure the servo thread ends
         servo_controller.cleanup()  # Cleanup GPIO pins
-
+        print("Servo rotation stopped and resources cleaned up.")
 
 
 # Start the WebSocket server in a separate thread
