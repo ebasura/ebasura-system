@@ -11,8 +11,9 @@ import os
 import threading
 import queue
 import config
+from app.engine import db
 # Load the TFLite model
-interpreter = tf.lite.Interpreter(model_path="models/vww_96_grayscale_quantized.tflite")
+interpreter = tf.lite.Interpreter(model_path="models/model_unquant.tflite")
 interpreter.allocate_tensors()
 
 # Get input and output details of the model
@@ -166,6 +167,27 @@ def recognize_frame(frame):
     except Exception as e:
         print(f"Error during processing: {str(e)}")
         return None
+    
+
+def waste_data(bin_id, waste_id, image):
+    # SQL query to insert data into waste_data table
+    query_insert = """
+        INSERT INTO `waste_data`(`bin_id`, `waste_type_id`, `image_url`, `timestamp`)
+        VALUES (%s, %s, %s, NOW())
+    """
+    
+    # Arguments to be passed into the query
+    args_insert = (bin_id, waste_id, image)
+
+    # Assuming `db.update()` is a method you have to execute the query
+    try:
+        if db.update(query_insert, args_insert):
+            print("Waste data inserted successfully.")
+        else:
+            print("Failed to insert waste data.")
+    except Exception as e:
+        print(f"Error inserting waste data: {e}")
+
 
 # WebSocket server for live camera feed and predictions
 async def websocket_handler(websocket, path):
@@ -183,7 +205,8 @@ async def websocket_handler(websocket, path):
             # Encode the frame as JPEG
             _, buffer = cv2.imencode('.jpg', frame)
             frame_data = base64.b64encode(buffer).decode('utf-8')
-
+            
+          
             # dictionary
             message = {
                 "frame": "data:image/jpeg;base64," + frame_data,
@@ -191,12 +214,14 @@ async def websocket_handler(websocket, path):
                 "health_status": {
                     "servo_online": True,
                     "sensors": {
-                        "recyclable_bin": False,
+                        "recyclable_bin": True,
                         "non_recyclable_bin": True,
                         "proximity": True,
                     },
                 }
             }
+            
+
 
             # Send the dictionary over the WebSocket connection in JSON format
             await websocket.send(json.dumps(message))
@@ -282,6 +307,15 @@ def servo_rotation():
 
             # Save the frame under the predicted label
             save_frame(frame, label)
+            
+            _, buffer = cv2.imencode('.jpg', frame)
+            frame_data = base64.b64encode(buffer).decode('utf-8')
+            
+            image = "data:image/jpeg;base64," + frame_data
+            waste_type = 1 if label == 'recyclable' else 2
+            waste_data(config.BIN_ID, waste_type, image)
+          
+
 
             # Reset the servo to default after 2 seconds
             time.sleep(2)

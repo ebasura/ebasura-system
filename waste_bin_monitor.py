@@ -2,7 +2,8 @@ import RPi.GPIO as GPIO
 import time
 from app.engine import db 
 import config
-
+import statistics
+import numpy as np
 # Set GPIO pin numbering mode
 GPIO.setmode(GPIO.BCM)
 
@@ -20,20 +21,19 @@ GPIO.setup(ECHO_BIN_ONE, GPIO.IN)
 GPIO.setup(TRIG_BIN_TWO, GPIO.OUT)
 GPIO.setup(ECHO_BIN_TWO, GPIO.IN)
 
-import statistics
-import time
-import RPi.GPIO as GPIO
 
-def measure_distance_once(trigger, echo):
+def measure_distance_once(trigger, echo, min_distance=2, max_distance=400):
     """
     Measure the distance using an ultrasonic sensor for a single reading.
+    Filters out invalid readings by rejecting values outside the expected range.
     Parameters:
     - trigger: GPIO pin number for the trigger pin of the sensor
     - echo: GPIO pin number for the echo pin of the sensor
-
-    Returns the calculated distance in centimeters.
+    - min_distance: Minimum valid distance in cm (default is 2 cm)
+    - max_distance: Maximum valid distance in cm (default is 400 cm)
+    
+    Returns the calculated distance in centimeters, or -1 for an invalid reading.
     """
-    # Ensure the trigger is low before starting measurement
     GPIO.output(trigger, False)
     time.sleep(0.05)  # Short delay before measurement
 
@@ -57,17 +57,23 @@ def measure_distance_once(trigger, echo):
 
     # Calculate distance in cm (speed of sound = 34300 cm/s)
     distance = pulse_duration * 17150
-    return round(distance, 2)
+
+    # Check if the distance is within the valid range
+    if min_distance <= distance <= max_distance:
+        return round(distance, 2)
+    else:
+        return -1  # Return -1 for invalid readings
+
 
 def measure_distance(trigger, echo, num_samples=5):
     """
-    Measure the distance multiple times and return the median for accuracy.
+    Measure the distance multiple times, remove outliers, and return the median.
     Parameters:
     - trigger: GPIO pin number for the trigger pin of the sensor
     - echo: GPIO pin number for the echo pin of the sensor
     - num_samples: Number of readings to take for the median calculation
 
-    Returns the median distance in centimeters.
+    Returns the median distance in centimeters, or -1 if no valid readings.
     """
     distances = []
     
@@ -77,13 +83,39 @@ def measure_distance(trigger, echo, num_samples=5):
             distances.append(distance)
         time.sleep(0.1)  # Small delay between readings to prevent sensor overload
     
+    # Remove outliers using a basic statistical filter
+    if len(distances) > 2:
+        distances = remove_outliers(distances)
+    
     if distances:
-        # Calculate the median distance from the valid readings
-        median_distance = statistics.median(distances)
-        return median_distance
+        # Return the median of the remaining valid distances
+        return statistics.median(distances)
     else:
-        # If no valid readings, return -1 to indicate failure
         return -1
+
+def remove_outliers(data, factor=1.5):
+    """
+    Remove outliers from the dataset using the IQR method.
+    Parameters:
+    - data: A list of distance measurements.
+    - factor: A multiplier for the interquartile range (default is 1.5).
+
+    Returns a list of valid readings with outliers removed.
+    """
+    if len(data) < 4:
+        return data  # Not enough data to remove outliers
+
+    # Calculate Q1 (25th percentile) and Q3 (75th percentile)
+    Q1 = np.percentile(data, 25)
+    Q3 = np.percentile(data, 75)
+    IQR = Q3 - Q1
+
+    # Define bounds for outlier removal
+    lower_bound = Q1 - (factor * IQR)
+    upper_bound = Q3 + (factor * IQR)
+
+    # Return the data excluding values outside the bounds
+    return [x for x in data if lower_bound <= x <= upper_bound]
 
 
 def recyclable_bin():

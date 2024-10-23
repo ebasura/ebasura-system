@@ -1,4 +1,4 @@
-BIN_ID=1
+BIN_ID=3
 BIN_NAME="CAS BASURA"
 
 RECYCLABLE = 1
@@ -12,7 +12,8 @@ ECHO_NON_RECYCLABLE_BIN = 23
 
 OBJECT_DETECTOR_PIN = 21
 
+SERVO_PIN=18
+
 INITIAL_DEPTH_CM = 75.0         # Initial depth of the bin in cm
 THRESHOLD_PERCENTAGE = 85.0     # Threshold percentage
 
-SERVO_PIN=18
