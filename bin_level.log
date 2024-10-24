@@ -1,0 +1,173 @@
+2024-10-24 11:02:03,511 - Checking for unsynced data...
+2024-10-24 11:02:09,687 - server listening on 0.0.0.0:8765
+2024-10-24 11:02:59,942 - Checking for unsynced data...
+2024-10-24 11:03:06,178 - server listening on 0.0.0.0:8765
+2024-10-24 11:03:50,013 - Checking for unsynced data...
+2024-10-24 11:03:56,246 - server listening on 0.0.0.0:8765
+2024-10-24 11:04:02,768 - Updated bin 1 with level 72.1 cm.
+2024-10-24 11:04:02,807 - Updated bin 2 with level 75.54 cm.
+2024-10-24 11:04:09,292 - Updated bin 1 with level 72.12 cm.
+2024-10-24 11:04:09,330 - Updated bin 2 with level 72.66 cm.
+2024-10-24 11:04:25,082 - Internet not available, retrying...
+2024-10-24 11:04:25,121 - Internet not available, retrying...
+2024-10-24 11:04:30,104 - Internet not available, retrying...
+2024-10-24 11:04:30,127 - Internet not available, retrying...
+2024-10-24 11:04:35,147 - Internet not available, retrying...
+2024-10-24 11:04:35,148 - Internet not available, retrying...
+2024-10-24 11:04:40,148 - No internet connection. Saving data locally.
+2024-10-24 11:04:40,148 - No internet connection. Saving data locally.
+2024-10-24 11:04:40,158 - Data saved locally: Bin ID 3, Waste Type 2, Fill Level 73.91
+2024-10-24 11:04:40,178 - Data saved locally: Bin ID 3, Waste Type 1, Fill Level 72.52
+2024-10-24 11:04:45,977 - Internet not available, retrying...
+2024-10-24 11:04:45,978 - Internet not available, retrying...
+2024-10-24 11:04:50,016 - Checking for unsynced data...
+2024-10-24 11:04:50,021 - Internet not available, retrying...
+2024-10-24 11:04:50,997 - Internet not available, retrying...
+2024-10-24 11:04:50,998 - Internet not available, retrying...
+2024-10-24 11:04:55,031 - Internet not available, retrying...
+2024-10-24 11:04:56,044 - Internet not available, retrying...
+2024-10-24 11:04:56,045 - Internet not available, retrying...
+2024-10-24 11:05:00,036 - Internet not available, retrying...
+2024-10-24 11:05:01,046 - No internet connection. Saving data locally.
+2024-10-24 11:05:01,046 - No internet connection. Saving data locally.
+2024-10-24 11:05:01,059 - Data saved locally: Bin ID 3, Waste Type 1, Fill Level 71.895
+2024-10-24 11:05:01,066 - Data saved locally: Bin ID 3, Waste Type 2, Fill Level 73.42
+2024-10-24 11:05:05,036 - Unable to sync data, internet not available.
+2024-10-24 11:05:06,874 - Internet not available, retrying...
+2024-10-24 11:05:06,876 - Internet not available, retrying...
+2024-10-24 11:05:12,606 - Updated bin 1 with level 72.13 cm.
+2024-10-24 11:05:12,646 - Updated bin 2 with level 73.42500000000001 cm.
+2024-10-24 11:05:13,146 - Synced bin 2 with level 73.91 cm to remote.
+2024-10-24 11:05:13,182 - Synced bin 2 with level 73.91 cm to remote.
+2024-10-24 11:05:13,415 - Synced bin 1 with level 72.52 cm to remote.
+2024-10-24 11:05:13,452 - Synced bin 1 with level 72.52 cm to remote.
+2024-10-24 11:05:13,669 - Synced bin 1 with level 71.895 cm to remote.
+2024-10-24 11:05:13,704 - Synced bin 1 with level 71.895 cm to remote.
+2024-10-24 11:05:13,923 - Synced bin 2 with level 73.42 cm to remote.
+2024-10-24 11:05:13,959 - Synced bin 2 with level 73.42 cm to remote.
+2024-10-24 11:05:20,508 - Updated bin 2 with level 73.82 cm.
+2024-10-24 11:05:20,546 - Updated bin 1 with level 72.32 cm.
+2024-10-24 11:05:27,055 - Updated bin 2 with level 74.66 cm.
+2024-10-24 11:05:27,099 - Updated bin 1 with level 72.11 cm.
+2024-10-24 11:05:33,695 - Updated bin 2 with level 74.02000000000001 cm.
+2024-10-24 11:05:33,790 - Updated bin 1 with level 72.71000000000001 cm.
+2024-10-24 11:05:40,292 - Updated bin 2 with level 74.65 cm.
+2024-10-24 11:05:40,409 - Updated bin 1 with level 71.91999999999999 cm.
+2024-10-24 11:05:46,819 - Updated bin 2 with level 73.39500000000001 cm.
+2024-10-24 11:05:46,953 - Updated bin 1 with level 72.89 cm.
+2024-10-24 11:05:53,399 - Updated bin 2 with level 73.815 cm.
+2024-10-24 11:05:53,544 - Updated bin 1 with level 72.5 cm.
+2024-10-24 11:06:00,011 - Updated bin 2 with level 74.23 cm.
+2024-10-24 11:06:00,086 - Updated bin 1 with level 72.31 cm.
+2024-10-24 11:06:05,037 - Checking for unsynced data...
+2024-10-24 11:06:06,532 - Updated bin 2 with level 73.42 cm.
+2024-10-24 11:06:06,639 - Updated bin 1 with level 71.74 cm.
+2024-10-24 11:06:13,069 - Updated bin 2 with level 73.4 cm.
+2024-10-24 11:06:13,188 - Updated bin 1 with level 72.29499999999999 cm.
+2024-10-24 11:06:19,656 - Updated bin 2 with level 81.66 cm.
+2024-10-24 11:06:19,808 - Updated bin 1 with level 71.705 cm.
+2024-10-24 11:06:26,267 - Updated bin 2 with level 73.41 cm.
+2024-10-24 11:06:26,344 - Updated bin 1 with level 72.305 cm.
+2024-10-24 11:06:32,786 - Updated bin 2 with level 74.035 cm.
+2024-10-24 11:06:32,911 - Updated bin 1 with level 72.505 cm.
+2024-10-24 11:06:39,306 - Updated bin 2 with level 74.03 cm.
+2024-10-24 11:06:39,412 - Updated bin 1 with level 72.1 cm.
+2024-10-24 11:06:45,838 - Updated bin 2 with level 73.42 cm.
+2024-10-24 11:06:45,943 - Updated bin 1 with level 72.495 cm.
+2024-10-24 11:06:52,359 - Updated bin 2 with level 73.4 cm.
+2024-10-24 11:06:52,441 - Updated bin 1 with level 72.1 cm.
+2024-10-24 11:06:58,844 - Updated bin 2 with level 73.405 cm.
+2024-10-24 11:06:59,048 - Updated bin 1 with level 72.10499999999999 cm.
+2024-10-24 11:07:05,039 - Checking for unsynced data...
+2024-10-24 11:07:05,427 - Updated bin 2 with level 73.39 cm.
+2024-10-24 11:07:05,651 - Updated bin 1 with level 72.11 cm.
+2024-10-24 11:07:11,991 - Updated bin 2 with level 74.045 cm.
+2024-10-24 11:07:12,174 - Updated bin 1 with level 72.11 cm.
+2024-10-24 11:07:18,502 - Updated bin 2 with level 73.42 cm.
+2024-10-24 11:07:18,698 - Updated bin 1 with level 72.52 cm.
+2024-10-24 11:07:25,065 - Updated bin 2 with level 73.005 cm.
+2024-10-24 11:07:25,210 - Updated bin 1 with level 72.08 cm.
+2024-10-24 11:07:31,610 - Updated bin 2 with level 72.995 cm.
+2024-10-24 11:07:31,733 - Updated bin 1 with level 72.10499999999999 cm.
+2024-10-24 11:07:38,175 - Updated bin 2 with level 73.4 cm.
+2024-10-24 11:07:38,227 - Updated bin 1 with level 72.11 cm.
+2024-10-24 11:07:44,726 - Updated bin 1 with level 72.11 cm.
+2024-10-24 11:07:44,773 - Updated bin 2 with level 73.41 cm.
+2024-10-24 11:07:51,216 - Updated bin 1 with level 72.08 cm.
+2024-10-24 11:07:51,268 - Updated bin 2 with level 73.41 cm.
+2024-10-24 11:07:57,745 - Updated bin 1 with level 72.11 cm.
+2024-10-24 11:07:57,786 - Updated bin 2 with level 72.58 cm.
+2024-10-24 11:08:04,271 - Updated bin 1 with level 72.1 cm.
+2024-10-24 11:08:04,407 - Updated bin 2 with level 73.4 cm.
+2024-10-24 11:08:05,040 - Checking for unsynced data...
+2024-10-24 11:08:10,774 - Updated bin 1 with level 72.51 cm.
+2024-10-24 11:08:10,906 - Updated bin 2 with level 73.42 cm.
+2024-10-24 11:08:26,563 - Internet not available, retrying...
+2024-10-24 11:08:26,696 - Internet not available, retrying...
+2024-10-24 11:08:31,568 - Internet not available, retrying...
+2024-10-24 11:08:31,700 - Internet not available, retrying...
+2024-10-24 11:08:36,612 - Internet not available, retrying...
+2024-10-24 11:08:36,708 - Internet not available, retrying...
+2024-10-24 11:08:41,613 - No internet connection. Saving data locally.
+2024-10-24 11:08:41,625 - Data saved locally: Bin ID 3, Waste Type 1, Fill Level 72.52
+2024-10-24 11:08:41,708 - No internet connection. Saving data locally.
+2024-10-24 11:08:41,722 - Data saved locally: Bin ID 3, Waste Type 2, Fill Level 73.41499999999999
+2024-10-24 11:08:47,443 - Internet not available, retrying...
+2024-10-24 11:08:47,562 - Internet not available, retrying...
+2024-10-24 11:08:52,480 - Internet not available, retrying...
+2024-10-24 11:08:52,571 - Internet not available, retrying...
+2024-10-24 11:08:58,225 - Updated bin 1 with level 72.1 cm.
+2024-10-24 11:08:58,320 - Updated bin 2 with level 74.81 cm.
+2024-10-24 11:08:58,730 - Synced bin 1 with level 72.52 cm to remote.
+2024-10-24 11:08:58,830 - Synced bin 1 with level 72.52 cm to remote.
+2024-10-24 11:08:58,986 - Synced bin 2 with level 73.41499999999999 cm to remote.
+2024-10-24 11:08:59,082 - Synced bin 2 with level 73.41499999999999 cm to remote.
+2024-10-24 11:09:05,042 - Checking for unsynced data...
+2024-10-24 11:09:05,490 - Updated bin 1 with level 71.68 cm.
+2024-10-24 11:09:05,580 - Updated bin 2 with level 73.33 cm.
+2024-10-24 11:09:12,026 - Updated bin 1 with level 72.47 cm.
+2024-10-24 11:09:12,138 - Updated bin 2 with level 73.33500000000001 cm.
+2024-10-24 11:09:18,543 - Updated bin 1 with level 72.1 cm.
+2024-10-24 11:09:18,647 - Updated bin 2 with level 74.61 cm.
+2024-10-24 11:09:25,060 - Updated bin 1 with level 72.51 cm.
+2024-10-24 11:09:25,225 - Updated bin 2 with level 73.36 cm.
+2024-10-24 11:09:31,594 - Updated bin 1 with level 72.1 cm.
+2024-10-24 11:09:31,803 - Updated bin 2 with level 74.18 cm.
+2024-10-24 11:09:38,172 - Updated bin 1 with level 71.72 cm.
+2024-10-24 11:09:38,434 - Updated bin 2 with level 74.59 cm.
+2024-10-24 11:09:44,883 - Updated bin 1 with level 71.71 cm.
+2024-10-24 11:09:45,043 - Updated bin 2 with level 75.44 cm.
+2024-10-24 11:09:51,447 - Updated bin 1 with level 78.57 cm.
+2024-10-24 11:09:51,607 - Updated bin 2 with level 80.055 cm.
+2024-10-24 11:09:58,093 - Updated bin 1 with level 73.57 cm.
+2024-10-24 11:09:58,211 - Updated bin 2 with level 75.42 cm.
+2024-10-24 11:10:04,592 - Updated bin 1 with level 72.1 cm.
+2024-10-24 11:10:04,717 - Updated bin 2 with level 74.59 cm.
+2024-10-24 11:10:05,044 - Checking for unsynced data...
+2024-10-24 11:10:11,118 - Updated bin 1 with level 72.715 cm.
+2024-10-24 11:10:11,225 - Updated bin 2 with level 74.21 cm.
+2024-10-24 11:10:17,631 - Updated bin 1 with level 71.68 cm.
+2024-10-24 11:10:17,773 - Updated bin 2 with level 74.17 cm.
+2024-10-24 11:10:24,876 - Checking for unsynced data...
+2024-10-24 11:10:35,674 - server listening on 0.0.0.0:8765
+2024-10-24 11:10:42,152 - Updated bin 1 with level 71.72 cm.
+2024-10-24 11:10:42,189 - Updated bin 2 with level 74.2 cm.
+2024-10-24 11:10:48,664 - Updated bin 1 with level 72.1 cm.
+2024-10-24 11:10:48,752 - Updated bin 2 with level 73.77 cm.
+2024-10-24 11:10:55,248 - Updated bin 2 with level 75.01 cm.
+2024-10-24 11:10:55,287 - Updated bin 1 with level 72.525 cm.
+2024-10-24 11:11:01,755 - Updated bin 2 with level 75.02000000000001 cm.
+2024-10-24 11:11:01,796 - Updated bin 1 with level 72.5 cm.
+2024-10-24 11:11:08,293 - Updated bin 1 with level 72.11 cm.
+2024-10-24 11:11:08,332 - Updated bin 2 with level 75.44 cm.
+2024-10-24 11:11:14,895 - Updated bin 2 with level 73.34 cm.
+2024-10-24 11:11:14,938 - Updated bin 1 with level 72.09 cm.
+2024-10-24 11:11:21,404 - Updated bin 2 with level 74.59 cm.
+2024-10-24 11:11:21,442 - Updated bin 1 with level 72.11 cm.
+2024-10-24 11:11:24,878 - Checking for unsynced data...
+2024-10-24 11:11:27,955 - Updated bin 1 with level 72.51 cm.
+2024-10-24 11:11:28,041 - Updated bin 2 with level 73.78 cm.
+2024-10-24 11:11:34,457 - Updated bin 1 with level 72.52 cm.
+2024-10-24 11:11:34,528 - Updated bin 2 with level 75.44 cm.
+2024-10-24 11:11:40,983 - Updated bin 1 with level 72.1 cm.
+2024-10-24 11:11:41,107 - Updated bin 2 with level 74.18 cm.

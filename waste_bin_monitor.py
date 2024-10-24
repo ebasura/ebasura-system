@@ -4,6 +4,12 @@ from app.engine import db
 import config
 import statistics
 import numpy as np
+import sqlite3
+import requests
+import threading
+import logging
+
+
 # Set GPIO pin numbering mode
 GPIO.setmode(GPIO.BCM)
 
@@ -20,6 +26,86 @@ GPIO.setup(ECHO_BIN_ONE, GPIO.IN)
 
 GPIO.setup(TRIG_BIN_TWO, GPIO.OUT)
 GPIO.setup(ECHO_BIN_TWO, GPIO.IN)
+
+logging.basicConfig(filename='bin_level.log', level=logging.INFO, format='%(asctime)s - %(message)s')
+
+def init_local_db():
+    conn = sqlite3.connect('local_waste_data.db')
+    c = conn.cursor()
+    c.execute('''CREATE TABLE IF NOT EXISTS waste_level_local
+                 (bin_id INTEGER, waste_type_id INTEGER, current_fill_level REAL, timestamp DATETIME DEFAULT CURRENT_TIMESTAMP)''')
+    conn.commit()
+    conn.close()
+
+# Insert data locally if there's no internet connection
+def insert_local_data(bin_id, waste_type_id, fill_level):
+    try:
+        conn = sqlite3.connect('local_waste_data.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO waste_level_local (bin_id, waste_type_id, current_fill_level) VALUES (?, ?, ?)",
+                  (bin_id, waste_type_id, fill_level))
+        conn.commit()
+        logging.info(f"Data saved locally: Bin ID {bin_id}, Waste Type {waste_type_id}, Fill Level {fill_level}")
+    except Exception as e:
+        logging.error(f"Error saving data locally: {e}")
+    finally:
+        conn.close()
+
+# Retrieve all unsynced local data
+def get_unsynced_data():
+    conn = sqlite3.connect('local_waste_data.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM waste_level_local")
+    data = c.fetchall()
+    conn.close()
+    return data
+
+# Remove data from local storage after syncing
+def remove_synced_data():
+    conn = sqlite3.connect('local_waste_data.db')
+    c = conn.cursor()
+    c.execute("DELETE FROM waste_level_local")
+    conn.commit()
+    conn.close()
+
+# Check internet connection by making an HTTP request
+def is_internet_available(retries=3, delay=5):
+    url = "https://www.google.com"
+    for _ in range(retries):
+        try:
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                return True
+        except requests.ConnectionError:
+            logging.warning("Internet not available, retrying...")
+        time.sleep(delay)
+    return False
+
+# Sync local data to the remote database
+def sync_local_data_to_remote():
+    unsynced_data = get_unsynced_data()
+    if not unsynced_data:
+        return  # No data to sync
+
+    if is_internet_available():
+        for record in unsynced_data:
+            bin_id, waste_type_id, fill_level, timestamp = record
+            query_update = """
+            UPDATE waste_level 
+            SET current_fill_level = %s, last_update = NOW()
+            WHERE bin_id = %s AND waste_type_id = %s
+            """
+            args_update = (fill_level, bin_id, waste_type_id)
+            if db.update(query_update, args_update):
+                logging.info(f"Synced bin {waste_type_id} with level {fill_level} cm to remote.")
+            else:
+                logging.error(f"Failed to sync bin {waste_type_id}.")
+
+        # After successful sync, remove local data
+        remove_synced_data()
+    else:
+        logging.error("Unable to sync data, internet not available.")
+
 
 
 def measure_distance_once(trigger, echo, min_distance=2, max_distance=400):
@@ -172,53 +258,78 @@ def ensure_waste_type_exists(bin_id, waste_type_id):
     else:
         print("Unexpected result format:", result)
 
+# Function to update bin level, syncing data when available
 def update_bin_level(bin_id, distance, waste_id):
     """
-    Update the current fill level of a waste bin in the database.
-    Parameters:
-    - bin_id: Unique ID of the bin
-    - distance: Measured distance from the sensor to the top of the bin content (in cm)
-    - waste_id: Type of waste (1 for recyclable, 2 for non-recyclable)
+    Update the current fill level of a waste bin in the database or locally if no internet.
     """
     # Limit distance to a maximum of 100 cm (assuming the bin height is 100 cm)
     distance = min(distance, 100)
 
-    # Ensure the database entry exists before updating
-    ensure_waste_type_exists(bin_id, waste_id)
+    if is_internet_available():
+        # Ensure the database entry exists before updating
+        ensure_waste_type_exists(bin_id, waste_id)
 
-    # Prepare the update query for the waste bin's current fill level
-    query_update = """
-    UPDATE waste_level 
-    SET current_fill_level = %s, last_update = NOW()
-    WHERE bin_id = %s AND waste_type_id = %s
-    """
-    args_update = (distance, bin_id, waste_id)
-
-    # Attempt to update the record, insert if update fails
-    if not db.update(query_update, args_update):
-        # Insert a new record if the update failed
-        query_insert = """
-        INSERT INTO waste_level (bin_id, waste_type_id, current_fill_level, last_update)
-        VALUES (%s, %s, %s, NOW())
+        query_update = """
+        UPDATE waste_level 
+        SET current_fill_level = %s, last_update = NOW()
+        WHERE bin_id = %s AND waste_type_id = %s
         """
-        args_insert = (bin_id, waste_id, distance)
+        args_update = (distance, bin_id, waste_id)
 
-        if db.update(query_insert, args_insert):
-            print(f"Inserted new bin {waste_id} with level {distance} cm.")
+        if db.update(query_update, args_update):
+            logging.info(f"Updated bin {waste_id} with level {distance} cm.")
+            sync_local_data_to_remote()  # Sync any unsynced local data
         else:
-            print(f"Failed to update or insert bin {waste_id}.")
+            logging.error(f"Failed to update bin {waste_id}.")
     else:
-        print(f"Updated bin {waste_id} with level {distance} cm.")
+        # Save data locally if no internet connection
+        logging.warning("No internet connection. Saving data locally.")
+        insert_local_data(bin_id, waste_id, distance)
 
-    # Insert a record into bin_fill_levels table for tracking the fill level over time
-    query_fill_levels_insert = """
-    INSERT INTO bin_fill_levels (bin_id, waste_type, timestamp, fill_level)
-    VALUES (%s, %s, NOW(), %s)
+# Background sync mechanism to check and sync data periodically
+def background_sync(interval=60):
+    while True:
+        logging.info("Checking for unsynced data...")
+        sync_local_data_to_remote()
+        time.sleep(interval)  # Wait before the next sync attempt
+
+def ensure_waste_type_exists(bin_id, waste_type_id):
     """
-    waste_type = 'recyclable' if waste_id == 1 else 'non-recyclable'  # Determine waste type string based on ID
-    args_fill_levels_insert = (bin_id, waste_id, distance)
+    Ensure that the bin entry exists in the database before updating it.
+    If the entry does not exist, insert a new record for the bin.
+    Parameters:
+    - bin_id: Unique ID of the bin
+    - waste_type_id: Type of waste (1 for recyclable, 2 for non-recyclable)
+    """
+    query_check = "SELECT COUNT(*) as count FROM waste_level WHERE bin_id = %s AND waste_type_id = %s"
+    args = (bin_id, waste_type_id)
 
-    if db.update(query_fill_levels_insert, args_fill_levels_insert):
-        print(f"Inserted fill level record for bin {bin_id} of type {waste_type} with level {distance} cm.")
+    result = db.fetch_one(query_check, args)
+
+    # Debugging output to verify result structure
+    print(f"Query result: {result}")
+
+    # Handle different result formats (tuple, list, or dictionary)
+    if isinstance(result, (tuple, list)):
+        if result[0] == 0:  # Check if there are no records
+            query_insert = "INSERT INTO waste_level (bin_id, waste_type_id) VALUES (%s, %s)"
+            db.update(query_insert, args)
+    elif isinstance(result, dict):
+        if result.get('count', 0) == 0:  # Check if 'count' key exists and has a value of 0
+            query_insert = "INSERT INTO waste_level (bin_id, waste_type_id) VALUES (%s, %s)"
+            db.update(query_insert, args)
     else:
-        print(f"Failed to insert fill level record for bin {bin_id}.")
+        print("Unexpected result format:", result)
+
+# Start background sync in a separate thread
+def start_background_sync():
+    sync_thread = threading.Thread(target=background_sync)
+    sync_thread.daemon = True
+    sync_thread.start()
+
+# Initialize local DB
+init_local_db()
+
+# Start background syncing
+start_background_sync()
