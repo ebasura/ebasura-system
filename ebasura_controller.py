@@ -12,7 +12,8 @@ import threading
 import queue
 import config
 from app.engine import db
-# Load the TFLite model
+
+# Load the TFLite model and allocate tensors for inference
 interpreter = tf.lite.Interpreter(model_path="models/model_unquant.tflite")
 interpreter.allocate_tensors()
 
@@ -20,11 +21,9 @@ interpreter.allocate_tensors()
 input_details = interpreter.get_input_details()
 output_details = interpreter.get_output_details()
 
-
-
+# Configure GPIO pins for object detection sensor
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(config.OBJECT_DETECTOR_PIN, GPIO.IN)
-
 
 def measure_distance(trigger, echo, timeout=1.0):
     """
@@ -72,29 +71,29 @@ def measure_distance(trigger, echo, timeout=1.0):
 
     return distance
 
-
-
-# Initialize ServoController
+# ServoController class to control servo motor movements
 class ServoController:
     def __init__(self, servo_pin):
         self.servo_pin = servo_pin
         GPIO.setmode(GPIO.BCM)
         GPIO.setup(self.servo_pin, GPIO.OUT)
-        self.pwm = GPIO.PWM(self.servo_pin, 50)  
-        self.pwm.start(0)  
+        self.pwm = GPIO.PWM(self.servo_pin, 50)  # Set PWM frequency to 50Hz
+        self.pwm.start(0)  # Initialize PWM with 0% duty cycle
     
     def set_angle(self, angle):
         # Ensure angle is within valid range for servo movement (0 to 180 degrees)
         angle = max(0, min(180, angle))
         duty = 2.5 + (angle / 18.0)
         self.pwm.ChangeDutyCycle(duty)
-        time.sleep(0.5)
-        self.pwm.ChangeDutyCycle(0) 
+        time.sleep(0.5)  # Pause to allow servo to move to the desired angle
+        self.pwm.ChangeDutyCycle(0)  # Stop sending signal to hold position
     
     def cleanup(self):
+        # Stop PWM and clean up GPIO pins
         self.pwm.stop()
         GPIO.cleanup()
 
+# Instantiate the servo controller and create a command queue
 servo_controller = ServoController(config.SERVO_PIN)
 servo_command_queue = queue.Queue()
 
@@ -103,14 +102,14 @@ def servo_worker():
     while True:
         command = servo_command_queue.get()
         if command is None:
-            break
+            break  # Exit the thread if None is received
         servo_controller.set_angle(command)
         servo_command_queue.task_done()
 
 servo_thread = threading.Thread(target=servo_worker, daemon=True)
 servo_thread.start()
 
-# Initialize webcam (shared instance)
+# Initialize the webcam (shared instance)
 camera_lock = threading.Lock()
 cap = cv2.VideoCapture(0)
 if not cap.isOpened():
@@ -119,6 +118,9 @@ if not cap.isOpened():
 
 # Preprocessing function for a single frame
 def preprocess_frame(frame):
+    """
+    Preprocess the frame to match the input requirements of the model.
+    """
     # Convert the image to grayscale if required by the model
     input_shape = input_details[0]['shape']
     if input_shape[-1] == 1:
@@ -140,8 +142,11 @@ def preprocess_frame(frame):
     input_tensor = np.expand_dims(input_tensor, axis=0).astype(np.float32)  # Add batch dimension
     return input_tensor
 
-# Function to run inference on a frame and return all predictions
+# Function to run inference on a frame and return predictions
 def recognize_frame(frame):
+    """
+    Run inference on the frame using the TFLite model and return sorted predictions.
+    """
     try:
         # Preprocess the frame
         input_tensor = preprocess_frame(frame)
@@ -168,18 +173,17 @@ def recognize_frame(frame):
         print(f"Error during processing: {str(e)}")
         return None
     
-
+# Function to insert waste data into the database
 def waste_data(bin_id, waste_id, image):
-    # SQL query to insert data into waste_data table
+    """
+    Insert waste data into the database, including bin ID, waste type, and captured image.
+    """
     query_insert = """
         INSERT INTO `waste_data`(`bin_id`, `waste_type_id`, `image_url`, `timestamp`)
         VALUES (%s, %s, %s, NOW())
     """
-    
-    # Arguments to be passed into the query
     args_insert = (bin_id, waste_id, image)
 
-    # Assuming `db.update()` is a method you have to execute the query
     try:
         if db.update(query_insert, args_insert):
             print("Waste data inserted successfully.")
@@ -188,9 +192,11 @@ def waste_data(bin_id, waste_id, image):
     except Exception as e:
         print(f"Error inserting waste data: {e}")
 
-
 # WebSocket server for live camera feed and predictions
 async def websocket_handler(websocket, path):
+    """
+    Handle incoming WebSocket connections to provide live camera feed and predictions.
+    """
     try:
         while True:
             with camera_lock:
@@ -206,8 +212,7 @@ async def websocket_handler(websocket, path):
             _, buffer = cv2.imencode('.jpg', frame)
             frame_data = base64.b64encode(buffer).decode('utf-8')
             
-          
-            # dictionary
+            # Prepare the message to send over WebSocket
             message = {
                 "frame": "data:image/jpeg;base64," + frame_data,
                 "predictions": predictions,
@@ -221,8 +226,6 @@ async def websocket_handler(websocket, path):
                 }
             }
             
-
-
             # Send the dictionary over the WebSocket connection in JSON format
             await websocket.send(json.dumps(message))
 
@@ -232,21 +235,33 @@ async def websocket_handler(websocket, path):
 
 # Main function to start the WebSocket server
 async def start_server():
+    """
+    Start the WebSocket server to provide live data.
+    """
     async with websockets.serve(websocket_handler, "0.0.0.0", 8765):
         print("WebSocket server started at ws://0.0.0.0:8765")
         await asyncio.Future()  # Run forever
 
 # Function to run the WebSocket server in a separate thread
 def start_server_thread():
+    """
+    Start the WebSocket server in a new thread.
+    """
     asyncio.run(start_server())
 
-
-# Helper to handle servo movements
+# Helper function to handle servo movements
 def move_servo(angle):
+    """
+    Add a servo movement command to the queue.
+    """
     servo_command_queue.put(angle)
     print(f"Servo moved to {angle} degrees.")
 
+# Function to save captured frame locally
 def save_frame(frame, label):
+    """
+    Save the captured frame in a directory corresponding to the predicted label.
+    """
     directory = os.path.join('captured_frames', label)
     if not os.path.exists(directory):
         os.makedirs(directory)
@@ -254,31 +269,35 @@ def save_frame(frame, label):
     cv2.imwrite(frame_path, frame)
     print(f"Frame saved to {frame_path}")
 
-def process_predictions(predictions):
-    if predictions is None:
+# Function to process predictions and return the top label if confidence threshold is met
+def process_predictions(predictions, confidence_threshold=0.7):
+    """
+    Process the model's predictions and return the top label if confidence exceeds the threshold.
+    """
+    if predictions is None or len(predictions) == 0:
         print("No predictions made, skipping this frame.")
-        return False
+        return None
 
+    # Extract the label and confidence of the top prediction
     label, confidence = predictions[0]
     
-    # Log predictions
+    # Log all predictions
     for pred_label, pred_confidence in predictions:
         print(f"{pred_label}: {pred_confidence * 100:.2f}%")
 
-    # Servo action based on the label
-    if label == 'recyclable':
-        move_servo(0)  # Move left for recyclable items
-        print("Item sorted to recyclable bin.")
-    elif label == 'non-recyclable':
-        move_servo(180)  # Move right for non-recyclable items
-        print("Item sorted to non-recyclable bin.")
-    else:
-        move_servo(90)  # Default angle for unrecognized items
-        print("Item not recognized. No sorting action taken.")
-    
+    # Check if confidence meets the threshold
+    if confidence < confidence_threshold:
+        print(f"Prediction confidence ({confidence * 100:.2f}%) below threshold. No action taken.")
+        return None
+
+    # Return the label for further processing
     return label
 
+# Function to handle the main servo rotation logic
 def servo_rotation():
+    """
+    Main function to manage servo movements based on object detection and predictions.
+    """
     try:
         while True:
             # Grab frame from webcam
@@ -291,15 +310,15 @@ def servo_rotation():
             # Check sensor status
             sensor_value = GPIO.input(config.OBJECT_DETECTOR_PIN)
 
-            # Reset servo to default if no object is detected
+            # If no object is detected, reset the servo and continue
             if sensor_value == GPIO.LOW:
                 move_servo(90)
-                time.sleep(0.5)  # Small pause before next check
+                time.sleep(0.5)
                 continue
 
             # Object detected, capture and process frame
             predictions = recognize_frame(frame)
-            
+
             # Process predictions and handle actions accordingly
             label = process_predictions(predictions)
             if not label:
@@ -307,15 +326,27 @@ def servo_rotation():
 
             # Save the frame under the predicted label
             save_frame(frame, label)
-            
+
+            # Encode frame as base64 to store in the database
             _, buffer = cv2.imencode('.jpg', frame)
             frame_data = base64.b64encode(buffer).decode('utf-8')
-            
             image = "data:image/jpeg;base64," + frame_data
+
+            # Assign waste type and save to the database
             waste_type = 1 if label == 'recyclable' else 2
             waste_data(config.BIN_ID, waste_type, image)
-          
+            print("Captured and saved frame.")
 
+            # Move the servo based on the predicted label
+            if label == 'recyclable':
+                move_servo(0)  # Move left for recyclable items
+                print("Item sorted to recyclable bin.")
+            elif label == 'non-recyclable':
+                move_servo(180)  # Move right for non-recyclable items
+                print("Item sorted to non-recyclable bin.")
+            else:
+                move_servo(90)  # Default angle for unrecognized items
+                print("Item not recognized. No sorting action taken.")
 
             # Reset the servo to default after 2 seconds
             time.sleep(2)
@@ -331,4 +362,3 @@ def servo_rotation():
         servo_thread.join()  # Ensure the servo thread ends
         servo_controller.cleanup()  # Cleanup GPIO pins
         print("Servo rotation stopped and resources cleaned up.")
-
