@@ -324,26 +324,32 @@ def servo_rotation():
             if not label:
                 continue
 
-            # Save the frame under the predicted label
-            save_frame(frame, label)
+          
 
             # Encode frame as base64 to store in the database
             _, buffer = cv2.imencode('.jpg', frame)
             frame_data = base64.b64encode(buffer).decode('utf-8')
             image = "data:image/jpeg;base64," + frame_data
 
-            # Assign waste type and save to the database
-            waste_type = 1 if label == 'recyclable' else 2
-            waste_data(config.BIN_ID, waste_type, image)
-            print("Captured and saved frame.")
 
             # Move the servo based on the predicted label
             if label == 'recyclable':
                 move_servo(0)  # Move left for recyclable items
                 print("Item sorted to recyclable bin.")
+                # Save the frame under the predicted label
+                save_frame(frame, label)
+                # Assign waste type and save to the database
+                waste_type = 1 if label == 'recyclable' else 2
+                waste_data(config.BIN_ID, waste_type, image)
+                print("Captured and saved frame.")
             elif label == 'non-recyclable':
                 move_servo(180)  # Move right for non-recyclable items
                 print("Item sorted to non-recyclable bin.")
+                # Save the frame under the predicted label
+                save_frame(frame, label)
+                waste_type = 1 if label == 'recyclable' else 2
+                waste_data(config.BIN_ID, waste_type, image)
+                print("Captured and saved frame.")
             else:
                 move_servo(90)  # Default angle for unrecognized items
                 print("Item not recognized. No sorting action taken.")
