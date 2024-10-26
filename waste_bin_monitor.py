@@ -65,7 +65,7 @@ def measure_distance_once(trigger, echo, min_distance=2, max_distance=400):
         return -1  # Return -1 for invalid readings
 
 
-def measure_distance(trigger, echo, num_samples=5):
+def measure_distance(trigger, echo, num_samples=20):
     """
     Measure the distance multiple times, remove outliers, and return the median.
     Parameters:
