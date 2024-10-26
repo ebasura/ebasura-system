@@ -204,15 +204,15 @@ def recognize_frame(frame):
         return None
     
 # Function to insert waste data into the database
-def waste_data(bin_id, waste_id, image):
+def waste_data(bin_id, waste_id, image, confidence):
     """
     Insert waste data into the database, including bin ID, waste type, and captured image.
     """
     query_insert = """
-        INSERT INTO `waste_data`(`bin_id`, `waste_type_id`, `image_url`, `timestamp`)
-        VALUES (%s, %s, %s, NOW())
+        INSERT INTO `waste_data`(`bin_id`, `waste_type_id`, `image_url`,`confidence`, `timestamp`)
+        VALUES (%s, %s, %s, %s, NOW())
     """
-    args_insert = (bin_id, waste_id, image)
+    args_insert = (bin_id, waste_id, image, confidence)
 
     try:
         if db.update(query_insert, args_insert):
@@ -302,11 +302,11 @@ def save_frame(frame, label):
 # Function to process predictions and return the top label if confidence threshold is met
 def process_predictions(predictions, confidence_threshold=0.7):
     """
-    Process the model's predictions and return the top label if confidence exceeds the threshold.
+    Process the model's predictions and return the top label and confidence if it exceeds the threshold.
     """
     if predictions is None or len(predictions) == 0:
         print("No predictions made, skipping this frame.")
-        return None
+        return None, None
 
     # Extract the label and confidence of the top prediction
     label, confidence = predictions[0]
@@ -318,10 +318,10 @@ def process_predictions(predictions, confidence_threshold=0.7):
     # Check if confidence meets the threshold
     if confidence < confidence_threshold:
         print(f"Prediction confidence ({confidence * 100:.2f}%) below threshold. No action taken.")
-        return None
+        return None, None
 
-    # Return the label for further processing
-    return label
+    # Return the label and confidence for further processing
+    return label, confidence
 
 # Function to handle the main servo rotation logic
 def servo_rotation():
@@ -351,35 +351,32 @@ def servo_rotation():
             predictions = recognize_frame(frame)
 
             # Process predictions and handle actions accordingly
-            label = process_predictions(predictions)
+            label, confidence = process_predictions(predictions)
             if not label:
                 continue
-
-          
 
             # Encode frame as base64 to store in the database
             _, buffer = cv2.imencode('.jpg', frame)
             frame_data = base64.b64encode(buffer).decode('utf-8')
             image = "data:image/jpeg;base64," + frame_data
 
-
             # Move the servo based on the predicted label
             if label == 'recyclable':
                 move_servo(0)  # Move left for recyclable items
                 print("Item sorted to recyclable bin.")
                 # Save the frame under the predicted label
-                save_frame(frame, label)
+                # save_frame(frame, label)
                 # Assign waste type and save to the database
                 waste_type = 1 if label == 'recyclable' else 2
-                waste_data(config.BIN_ID, waste_type, image)
+                waste_data(config.BIN_ID, waste_type, image, confidence)
                 print("Captured and saved frame.")
             elif label == 'non-recyclable':
                 move_servo(180)  # Move right for non-recyclable items
                 print("Item sorted to non-recyclable bin.")
                 # Save the frame under the predicted label
-                save_frame(frame, label)
+                # save_frame(frame, label)
                 waste_type = 1 if label == 'recyclable' else 2
-                waste_data(config.BIN_ID, waste_type, image)
+                waste_data(config.BIN_ID, waste_type, image, confidence)
                 print("Captured and saved frame.")
             else:
                 move_servo(90)  # Default angle for unrecognized items

@@ -1,9 +1,10 @@
+import RPi.GPIO as GPIO
+import time
 from threading import Thread
 from waste_bin_monitor import recyclable_bin, non_recyclable_bin
-import time
 import sys
-import RPi.GPIO as GPIO
 import ebasura_controller
+from network_health_led import internet_monitor
 
 def run_gpio_bin_level():
     """Run GPIO bin level measurement in a separate thread."""
@@ -21,11 +22,16 @@ def run_gpio_bin_level():
     except Exception as e:
         print(f"Error occurred in GPIO measurement: {e}")
 
+
 if __name__ == "__main__":
     try:
         # Start the GPIO bin level measurement
         gpio_thread = Thread(target=run_gpio_bin_level)
         gpio_thread.start()
+
+        # Start the internet monitoring thread
+        internet_monitor_thread = Thread(target=internet_monitor)
+        internet_monitor_thread.start()
 
         # Integrate with ebasura_controller (e.g., start WebSocket server and servo rotation)
         ebasura_controller_thread = Thread(target=ebasura_controller.start_server_thread)
@@ -34,10 +40,11 @@ if __name__ == "__main__":
         ebasura_controller_thread.start()
         servo_thread.start()
 
-        # Wait for both threads to finish
+        # Wait for all threads to finish
+        gpio_thread.join()
+        internet_monitor_thread.join()
         ebasura_controller_thread.join()
         servo_thread.join()
-        gpio_thread.join()
 
     except KeyboardInterrupt:
         print("Shutting down...")
