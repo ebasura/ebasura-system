@@ -342,7 +342,6 @@ def servo_rotation():
             
             # If no object is detected, reset the servo and continue
             if sensor_value >= 80.0:
-                move_servo(90)
                 time.sleep(0.5)
                 continue
             print(sensor_value)
