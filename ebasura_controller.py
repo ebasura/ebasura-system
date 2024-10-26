@@ -12,6 +12,16 @@ import threading
 import queue
 import config
 from app.engine import db
+import board
+import digitalio
+import busio
+from adafruit_mcp3xxx.mcp3008 import MCP3008
+from adafruit_mcp3xxx.analog_in import AnalogIn
+
+# Initialize SPI bus and MCP3008
+spi = busio.SPI(clock=board.SCK, MISO=board.MISO, MOSI=board.MOSI)
+cs = digitalio.DigitalInOut(board.D8)  # Chip select pin
+mcp = MCP3008(spi, cs)
 
 # Load the TFLite model and allocate tensors for inference
 interpreter = tf.lite.Interpreter(model_path="models/model_unquant.tflite")
@@ -24,6 +34,26 @@ output_details = interpreter.get_output_details()
 # Configure GPIO pins for object detection sensor
 GPIO.setmode(GPIO.BCM)
 GPIO.setup(config.OBJECT_DETECTOR_PIN, GPIO.IN)
+
+def read_distance(channel, delay=2):
+    """
+    Reads the distance from the specified MCP3008 analog channel and prints it.
+    
+    Parameters:
+    channel (int): The MCP3008 channel to read from (0-7).
+    delay (int, optional): The time to wait between readings in seconds. Default is 2 seconds.
+    """
+    try:
+        while True:
+            time.sleep(delay)
+            # Read the specified channel and convert voltage to distance
+            chan = AnalogIn(mcp, channel)  # Access the specified channel
+            v = chan.voltage
+            dist = 16.2537 * v**4 - 129.893 * v**3 + 382.268 * v**2 - 512.611 * v + 301.439
+            return dist
+    except KeyboardInterrupt:
+        print("Exiting program")
+
 
 def measure_distance(trigger, echo, timeout=1.0):
     """
@@ -308,13 +338,14 @@ def servo_rotation():
                 break
 
             # Check sensor status
-            sensor_value = GPIO.input(config.OBJECT_DETECTOR_PIN)
-
+            sensor_value = read_distance(0, 1.0)
+            
             # If no object is detected, reset the servo and continue
-            if sensor_value == GPIO.LOW:
+            if sensor_value >= 80.0:
                 move_servo(90)
                 time.sleep(0.5)
                 continue
+            print(sensor_value)
 
             # Object detected, capture and process frame
             predictions = recognize_frame(frame)
