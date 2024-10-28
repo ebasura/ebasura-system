@@ -124,8 +124,8 @@ def recyclable_bin():
     """
     try:
         while True:
-            # Measure distance for the recyclable bin every 5 seconds
-            time.sleep(5)
+            # Measure distance for the recyclable bin every 3 seconds
+            time.sleep(3)
             distance = measure_distance(TRIG_BIN_ONE, ECHO_BIN_ONE)
             update_bin_level(config.BIN_ID, distance, 1)    # Update bin with ID 1 (recyclable)
     except KeyboardInterrupt:  # Handle keyboard interrupt to exit cleanly
@@ -137,8 +137,8 @@ def non_recyclable_bin():
     """
     try:
         while True:
-            # Measure distance for the non-recyclable bin every 5 seconds
-            time.sleep(5)
+            # Measure distance for the non-recyclable bin every 3 seconds
+            time.sleep(3)
             distance = measure_distance(TRIG_BIN_TWO, ECHO_BIN_TWO)
             update_bin_level(config.BIN_ID, distance, 2)    # Update bin with ID 2 (non-recyclable)
     except KeyboardInterrupt:  # Handle keyboard interrupt to exit cleanly

@@ -36,7 +36,7 @@ if __name__ == "__main__":
         # Integrate with ebasura_controller (e.g., start WebSocket server and servo rotation)
         ebasura_controller_thread = Thread(target=ebasura_controller.start_server_thread)
         servo_thread = Thread(target=ebasura_controller.servo_rotation)
-
+                
         ebasura_controller_thread.start()
         servo_thread.start()
 
@@ -45,6 +45,7 @@ if __name__ == "__main__":
         internet_monitor_thread.join()
         ebasura_controller_thread.join()
         servo_thread.join()
+        
 
     except KeyboardInterrupt:
         print("Shutting down...")

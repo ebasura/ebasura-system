@@ -339,12 +339,12 @@ def servo_rotation():
 
             # Check sensor status
             sensor_value = read_distance(0, 1.0)
-            
+            print(sensor_value)
+
             # If no object is detected, reset the servo and continue
-            if sensor_value >= 80.0:
+            if sensor_value >= 120.0:
                 time.sleep(0.5)
                 continue
-            print(sensor_value)
 
             # Object detected, capture and process frame
             predictions = recognize_frame(frame)
